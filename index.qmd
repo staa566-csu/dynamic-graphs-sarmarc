@@ -1,0 +1,87 @@
+---
+title: "dynamic-graphs"
+author: "Sarah Marcrum"
+format: html
+editor: visual
+---
+
+## Superbowl Ad Content
+
+-   Source: <https://github.com/fivethirtyeight/superbowl-ads>
+
+    This data set lists ads from the 10 brands that had the most advertisements in Super Bowls from 2000 to 2020, classified by various characteristics (funny, patriotic, animals, etc.). The goal of the following figure is to show trends in advertising over the years.
+
+```{r, results='hide'}
+library(dplyr)
+# read data
+data <- read.csv("superbowl-ads.csv")
+
+head(data)
+```
+
+```{r, results='hide', echo=TRUE}
+# convert logicals
+data <- data %>% mutate(across(funny:use_sex,as.logical))
+```
+
+```{r, results='hide', echo=FALSE}
+# group data by year
+yearly <- data %>% 
+  group_by(year) %>%
+  summarise(funny = sum(funny),
+            product = sum(show_product_quickly),
+            patriotic = sum(patriotic),
+            celebrity = sum(celebrity),
+            danger = sum(danger),
+            animals = sum(animals),
+            sex = sum(use_sex))
+
+head(yearly)
+```
+
+```{r, results='hide', echo=FALSE}
+# wide to long format
+library(tidyr)
+yearly_long <- yearly %>% gather(content, count, -year)
+
+head(yearly_long)
+```
+
+```{r, echo=TRUE, results='hide'}
+library(plotly)
+# define highlight key
+hl <- highlight_key(yearly_long, ~content)
+
+# construct base plot
+p <- ggplot(hl, aes(x=year, y=count, group=content)) + geom_line(aes(color=content)) 
+p <- p + ggtitle("Superbowl Ad Content (2000-2020)") + 
+  labs(subtitle = "Top 10 Superbowl Advertisers (brands)") + xlab("Year") + ylab("Number of Ads")
+p <- p + theme_minimal()
+p <- p + theme(plot.title=element_text(hjust=0.5), plot.subtitle=element_text(hjust=0.5))
+p <- p + guides(color=guide_legend(title="Content Feature"))
+p <- p + scale_y_continuous(limits = c(0, 14), breaks = seq(0, 14, by = 2))
+p
+```
+
+```{r, echo=TRUE}
+# convert to plotly interactive figure
+
+plt <- ggplotly(p, tooltip = c("year", "count")) %>% highlight(
+  on = "plotly_click",
+  off = "plotly_relayout"
+)
+
+plt
+```
+
+Because there are several classifiers for the ad content, and each ad may fall into multiple classes, the ability to select and highlight a specific feature makes the data more interpretable. Alternatively, I could have used facet_wrap to create a matrix of plots for each individual class, but it becomes more difficult to compare classes when plotted separately. With the hover-over functionality of this dynamic plot, there is an option to compare across classes and display the tooltip for all classes at once; I think this is a nice feature for comparison.
+
+
+
+
+
+
+
+
+
+
